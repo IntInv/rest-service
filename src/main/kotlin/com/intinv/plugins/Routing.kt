@@ -174,9 +174,9 @@ fun Application.configureRouting() {
 			val priceList = parsePriceJson(priceListString);
 			println("Read: $priceList")
 
-			val listTicket: MutableList<Ticket> = mutableListOf<Ticket>()
+			val securitiesListToRespond: MutableList<Ticket> = mutableListOf<Ticket>()
 			infoResponse.stocks.forEach{
-				listTicket.add(Ticket(
+				securitiesListToRespond.add(Ticket(
 					name = it.name,
 					fullName = it.fullName,
 					time = System.currentTimeMillis(),
@@ -185,56 +185,53 @@ fun Application.configureRouting() {
 				))
 
 			}
-
-			val securitiesListToRespond = Quotes(data = listTicket)
 			// TODO - take json from redis, parse it to body and pass as response
 
-//			val securitiesListToRespond = Quotes(
-//					data = listOf(
-//					Ticket(
-//						name = "Brabiks",
-//						fullName = "Barbie and Oppenheimer",
-//						time = System.currentTimeMillis(),
-//						price = 176.8,
-//						changeDay = 12.67
-//					),
-//					Ticket(
-//						name = "Kek",
-//						fullName = "Kekovna Rekser",
-//						time = System.currentTimeMillis(),
-//						price = 6.12,
-//						changeDay = 0.56
-//					),
-//					Ticket(
-//						name = "Kok",
-//						fullName = "Stock default",
-//						time = System.currentTimeMillis(),
-//						price = 456.1,
-//						changeDay = 192.67
-//					),
-//					Ticket(
-//						name = "Brabiks",
-//						fullName = "Barbie and Oppenheimer",
-//						time = System.currentTimeMillis(),
-//						price = 176.8,
-//						changeDay = 12.67
-//					),
-//					Ticket(
-//						name = "Kek",
-//						fullName = "Kekovna Rekser",
-//						time = System.currentTimeMillis(),
-//						price = 6.12,
-//						changeDay = 0.56
-//					),
-//					Ticket(
-//						name = "Kok",
-//						fullName = "Stock default",
-//						time = System.currentTimeMillis(),
-//						price = 456.1,
-//						changeDay = 192.67
-//					)
+//			val securitiesListToRespond = listOf(
+//				Ticket(
+//					name = "Brabiks",
+//					fullName = "Barbie and Oppenheimer",
+//					time = System.currentTimeMillis(),
+//					price = 176.8,
+//					changeDay = 12.67
+//				),
+//				Ticket(
+//					name = "Kek",
+//					fullName = "Kekovna Rekser",
+//					time = System.currentTimeMillis(),
+//					price = 6.12,
+//					changeDay = 0.56
+//				),
+//				Ticket(
+//					name = "Kok",
+//					fullName = "Stock default",
+//					time = System.currentTimeMillis(),
+//					price = 456.1,
+//					changeDay = 192.67
+//				),
+//				Ticket(
+//					name = "Brabiks",
+//					fullName = "Barbie and Oppenheimer",
+//					time = System.currentTimeMillis(),
+//					price = 176.8,
+//					changeDay = 12.67
+//				),
+//				Ticket(
+//					name = "Kek",
+//					fullName = "Kekovna Rekser",
+//					time = System.currentTimeMillis(),
+//					price = 6.12,
+//					changeDay = 0.56
+//				),
+//				Ticket(
+//					name = "Kok",
+//					fullName = "Stock default",
+//					time = System.currentTimeMillis(),
+//					price = 456.1,
+//					changeDay = 192.67
 //				)
 //			)
+
 			call.respond(securitiesListToRespond)
 		}
 		post("/trade") {

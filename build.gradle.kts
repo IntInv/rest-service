@@ -29,6 +29,8 @@ dependencies {
 	implementation("io.ktor:ktor-serialization-gson:$ktor_version")
 
 	implementation("ch.qos.logback:logback-classic:$logback_version")
+	implementation ("com.fasterxml.jackson.core:jackson-databind:2.13.1")
+	implementation ("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1")
 
 	implementation("redis.clients:jedis:5.0.0")
 

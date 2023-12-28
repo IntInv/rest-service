@@ -65,6 +65,7 @@ object RedisClientActor {
 	suspend fun read(channel: String): String {
 		val response = CompletableDeferred<String>()
 		redisActor.send(Read(channel, response))
+		println("Send message" + Read(channel, response))
 		return response.await()
 	}
 

@@ -6,17 +6,39 @@ import com.intinv.domain.Portfolio
 import com.intinv.domain.PortfolioDetail
 import com.intinv.domain.Ticket
 import com.intinv.domain.Transaction
+import com.intinv.intinvapp.domain.PortfolioTicket
+import com.intinv.intinvapp.domain.Quotes
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.intinv.msgs.*
+
+fun parseInfoJson(jsonString: String): InfoResponse {
+	val objectMapper = ObjectMapper().registerKotlinModule()
+	return objectMapper.readValue(jsonString)
+}
+
+
+fun parsePriceJson(jsonString: String): PriceResponse {
+	val objectMapper = jacksonObjectMapper()
+	return objectMapper.readValue(jsonString)
+}
+
+
 fun Application.configureRouting() {
+	var id_message = 0;
+	val mapper = jacksonObjectMapper()
 	routing {
 		get("/portfolio") {
-			val portfolioResponseString = RedisClientActor.read(PORTFOLIO_CHANNEL_NAME)
-			println(portfolioResponseString)
+//			val portfolioResponseString = RedisClientActor.read(PORTFOLIO_CHANNEL_NAME)
+//			println(portfolioResponseString)
 			// TODO - take json from redis
 			val portfolioToRespond = Portfolio(
 				fullValue = 432539.12,
@@ -24,26 +46,26 @@ fun Application.configureRouting() {
 				captioValue = 2000.0,
 				openValue = 3000.0,
 				listTicket = listOf(
-					Ticket(
-						name = "Brabiks",
-						fullName = "Barbie and Oppenheimer",
-						time = System.currentTimeMillis(),
-						price = 176.8,
-						changeDay = 12.67
+					PortfolioTicket(
+						name = "ACES",
+						fullName = "Ace Hardware Indonesia Tbk",
+						invValue = 	1454658.0,
+						profValue = 12567.0,
+						allocateValue = 20.0,
 					),
-					Ticket(
-						name = "Kek",
-						fullName = "Kekovna Rekser",
-						time = System.currentTimeMillis(),
-						price = 6.12,
-						changeDay = 0.56
+					PortfolioTicket (
+						name = "ACES",
+						fullName ="Ace Hardware Indonesia Tbk",
+						invValue = 1454658.0,
+						profValue = 12567.0,
+						allocateValue = 20.0,
 					),
-					Ticket(
+					PortfolioTicket(
 						name = "Kok",
 						fullName = "Stock default",
-						time = System.currentTimeMillis(),
-						price = 456.1,
-						changeDay = 192.67
+						invValue =1454658.0,
+						profValue =12567.0,
+						allocateValue = 20.0,
 					),
 				)
 			)
@@ -54,9 +76,9 @@ fun Application.configureRouting() {
 			if (label != null) {
 
 				// firstly ask for publishing position detail in channel, then read it ????
-				RedisClientActor.write(PORTFOLIO_POSITION_ASK_CHANNEL_NAME, label)
-				val portfolioDetailFromRedis = RedisClientActor.read(PORTFOLIO_POSITION_CHANNEL_NAME)
-				println(portfolioDetailFromRedis)
+//				RedisClientActor.write(PORTFOLIO_POSITION_ASK_CHANNEL_NAME, label)
+//				val portfolioDetailFromRedis = RedisClientActor.read(PORTFOLIO_POSITION_CHANNEL_NAME)
+//				println(portfolioDetailFromRedis)
 
 				// TODO - get position by label from redis
 
@@ -108,55 +130,111 @@ fun Application.configureRouting() {
 			}
 		}
 		get("/securities") {
-			val securitiesListString = RedisClientActor.read(SECURITIES_CHANNEL_NAME)
-			println(securitiesListString)
+			println("Start read securities")
 
+
+			val infoRequest = Request(id_message++.toLong(), "getStocks")
+			val infoMessage = mapper.writeValueAsString(infoRequest)
+//			val message = "{ \"method\":\"getStocks\", \"id\": $id_message }";
+			println("Write: $infoMessage")
+			RedisClientActor.write(RESR_API_CHANNEL_NAME, infoMessage)
+			id_message++;
+			val securitiesListString = RedisClientActor.read(SECURITIES_CHANNEL_NAME)
+			val infoResponse = parseInfoJson(securitiesListString);
+			println("Read: $infoResponse")
+
+//			val infoResponse = InfoResponse(
+//				listOf(
+//					TicketName(
+//					name = "ABRD",
+//					fullName = "АбрауДюрсо"
+//					),
+//					TicketName(
+//						name = "ABT-RM",
+//						fullName = "Abbott"
+//					),
+//					TicketName(
+//						name = "ACAD-RM",
+//						fullName = "Acadia"
+//					))
+//			)
+
+			val listName : MutableList<String> = mutableListOf()
+			infoResponse.stocks.forEach{
+				listName.add(it.name)
+			}
+			val requestPrise = PriceRequest(stocks = listName)
+			requestPrise.id = id_message++.toLong()
+			requestPrise.method = "getPrices"
+			val messageRequest = mapper.writeValueAsString(requestPrise)
+//			var message = "{ \"method\":\"getPrices\", \"id\": $id_message , \"stocks\": [\"ABT-RM\", \"ACAD-RM\", \"ABRD\"] }";
+			println("Write: $messageRequest")
+			RedisClientActor.write(RESR_API_CHANNEL_NAME, messageRequest)
+			val priceListString = RedisClientActor.read(SECURITIES_CHANNEL_NAME)
+			val priceList = parsePriceJson(priceListString);
+			println("Read: $priceList")
+
+			val listTicket: MutableList<Ticket> = mutableListOf<Ticket>()
+			infoResponse.stocks.forEach{
+				listTicket.add(Ticket(
+					name = it.name,
+					fullName = it.fullName,
+					time = System.currentTimeMillis(),
+					price = priceList.prices[it.name] ?: 0.0 ,
+					changeDay = 12.67
+				))
+
+			}
+
+			val securitiesListToRespond = Quotes(data = listTicket)
 			// TODO - take json from redis, parse it to body and pass as response
 
-			val securitiesListToRespond = listOf(
-				Ticket(
-					name = "Brabiks",
-					fullName = "Barbie and Oppenheimer",
-					time = System.currentTimeMillis(),
-					price = 176.8,
-					changeDay = 12.67
-				),
-				Ticket(
-					name = "Kek",
-					fullName = "Kekovna Rekser",
-					time = System.currentTimeMillis(),
-					price = 6.12,
-					changeDay = 0.56
-				),
-				Ticket(
-					name = "Kok",
-					fullName = "Stock default",
-					time = System.currentTimeMillis(),
-					price = 456.1,
-					changeDay = 192.67
-				),
-				Ticket(
-					name = "Brabiks",
-					fullName = "Barbie and Oppenheimer",
-					time = System.currentTimeMillis(),
-					price = 176.8,
-					changeDay = 12.67
-				),
-				Ticket(
-					name = "Kek",
-					fullName = "Kekovna Rekser",
-					time = System.currentTimeMillis(),
-					price = 6.12,
-					changeDay = 0.56
-				),
-				Ticket(
-					name = "Kok",
-					fullName = "Stock default",
-					time = System.currentTimeMillis(),
-					price = 456.1,
-					changeDay = 192.67
-				)
-			)
+//			val securitiesListToRespond = Quotes(
+//					data = listOf(
+//					Ticket(
+//						name = "Brabiks",
+//						fullName = "Barbie and Oppenheimer",
+//						time = System.currentTimeMillis(),
+//						price = 176.8,
+//						changeDay = 12.67
+//					),
+//					Ticket(
+//						name = "Kek",
+//						fullName = "Kekovna Rekser",
+//						time = System.currentTimeMillis(),
+//						price = 6.12,
+//						changeDay = 0.56
+//					),
+//					Ticket(
+//						name = "Kok",
+//						fullName = "Stock default",
+//						time = System.currentTimeMillis(),
+//						price = 456.1,
+//						changeDay = 192.67
+//					),
+//					Ticket(
+//						name = "Brabiks",
+//						fullName = "Barbie and Oppenheimer",
+//						time = System.currentTimeMillis(),
+//						price = 176.8,
+//						changeDay = 12.67
+//					),
+//					Ticket(
+//						name = "Kek",
+//						fullName = "Kekovna Rekser",
+//						time = System.currentTimeMillis(),
+//						price = 6.12,
+//						changeDay = 0.56
+//					),
+//					Ticket(
+//						name = "Kok",
+//						fullName = "Stock default",
+//						time = System.currentTimeMillis(),
+//						price = 456.1,
+//						changeDay = 192.67
+//					)
+//				)
+//			)
 			call.respond(securitiesListToRespond)
 		}
 		post("/trade") {
